@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Add User - IRVIS Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      background: #f7f7f7; 
+      margin: 0; 
+      padding: 20px;
+    }
+    .container { 
+      max-width: 500px; 
+      margin: 40px auto; 
+      background: #fff; 
+      padding: 32px; 
+      border-radius: 8px; 
+      box-shadow: 0 2px 8px #ccc; 
+    }
+    h2 { 
+      text-align: center; 
+      color: #333;
+      margin-bottom: 24px;
+    }
+    .error { 
+      color: #d32f2f; 
+      text-align: center; 
+      margin-bottom: 16px; 
+      padding: 8px;
+      background: #ffebee;
+      border-radius: 4px;
+    }
+    .success { 
+      color: #2e7d32; 
+      text-align: center; 
+      margin-bottom: 16px; 
+      padding: 8px;
+      background: #e8f5e8;
+      border-radius: 4px;
+    }
+    label { 
+      display: block; 
+      margin-bottom: 6px; 
+      font-weight: bold; 
+      color: #555;
+    }
+    input[type="text"], input[type="email"], input[type="password"] { 
+      width: 100%; 
+      padding: 12px; 
+      margin: 0 0 16px 0; 
+      border: 1px solid #ccc; 
+      border-radius: 4px; 
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    .checkbox-container {
+      margin: 16px 0;
+      display: flex;
+      align-items: center;
+    }
+    input[type="checkbox"] {
+      margin-right: 8px;
+      transform: scale(1.2);
+    }
+    .checkbox-label {
+      margin-bottom: 0;
+      font-weight: normal;
+      cursor: pointer;
+    }
+    button { 
+      width: 100%; 
+      padding: 12px; 
+      background: #8d6e63; 
+      color: white; 
+      border: none; 
+      border-radius: 4px; 
+      font-size: 16px; 
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    button:hover { 
+      background: #6d4c41; 
+    }
+    .nav-links {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .nav-links a {
+      color: #8d6e63;
+      text-decoration: none;
+      margin: 0 10px;
+    }
+    .nav-links a:hover {
+      color: #6d4c41;
+      text-decoration: underline;
+    }
+    .form-note {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 16px;
+      padding: 8px;
+      background: #f5f5f5;
+      border-radius: 4px;
+    }
+  </style>
+  <script>
+    window.onload = function() {
+      const params = new URLSearchParams(window.location.search);
+      const error = params.get('error');
+      const success = params.get('success');
+      
+      if (error) {
+        document.getElementById('error-msg').textContent = decodeURIComponent(error);
+        document.getElementById('error-msg').style.display = 'block';
+      }
+      
+      if (success) {
+        document.getElementById('success-msg').textContent = decodeURIComponent(success);
+        document.getElementById('success-msg').style.display = 'block';
+      }
+    };
+
+    function validateForm() {
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+      
+      if (password !== confirmPassword) {
+        alert('Passwords do not match!');
+        return false;
+      }
+      
+      if (password.length < 6) {
+        alert('Password must be at least 6 characters long!');
+        return false;
+      }
+      
+      return true;
+    }
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h2>Add New User</h2>
+    <div id="error-msg" class="error" style="display:none;"></div>
+    <div id="success-msg" class="success" style="display:none;"></div>
+    
+    <div class="form-note">
+      <strong>Note:</strong> Only administrators can create new user accounts. 
+      The password will be securely hashed before storage.
+    </div>
+    
+    <form method="POST" action="/irvis/add_user" onsubmit="return validateForm();">
+      <label for="username">Username:</label>
+      <input type="text" id="username" name="username" placeholder="Enter username" required maxlength="64">
+      
+      <label for="email">Email Address:</label>
+      <input type="email" id="email" name="email" placeholder="Enter email address" required maxlength="255">
+      
+      <label for="password">Password:</label>
+      <input type="password" id="password" name="password" placeholder="Enter password" required minlength="6">
+      
+      <label for="confirm-password">Confirm Password:</label>
+      <input type="password" id="confirm-password" name="confirm_password" placeholder="Confirm password" required minlength="6">
+      
+      <div class="checkbox-container">
+        <input type="checkbox" id="is_admin" name="is_admin" value="true">
+        <label for="is_admin" class="checkbox-label">Grant administrator privileges</label>
+      </div>
+      
+      <button type="submit">Create User</button>
+    </form>
+    
+    <div class="nav-links">
+      <a href="/irvis">← Home</a>
+    </div>
+  </div>
+</body>
+</html>

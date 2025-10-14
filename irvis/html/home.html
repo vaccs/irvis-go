@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IRVIS - Home</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #f5f5f5;
+    }
+    
+    .app-container {
+      height: 90vh;
+      width: 100%;
+      border: none;
+      background: white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .navigation-container {
+      height: 10vh;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      background: white;
+      border-top: 1px solid #e0e0e0;
+      gap: 15px;
+    }
+    
+    .nav-button {
+      padding: 8px 16px;
+      background: #1976d2;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    
+    .nav-button:hover {
+      background: #1565c0;
+    }
+    
+    .nav-button.about {
+      background: #8d6e63;
+      color: white;
+    }
+    
+    .nav-button.about:hover {
+      background: #6d4c41;
+    }
+    
+    .nav-button.report {
+      background: #8d6e63;
+      color: white;
+    }
+    
+    .nav-button.report:hover {
+      background: #6d4c41;
+    }
+    
+    .nav-button.add-user {
+      background: #8d6e63;
+      color: white;
+    }
+    
+    .nav-button.add-user:hover {
+      background: #6d4c41;
+    }
+    
+    .user-info {
+      margin-left: auto;
+      font-size: 12px;
+      color: #666;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .logout-button {
+      padding: 6px 12px;
+      background: #8d6e63;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    
+    .logout-button:hover {
+      background: #6d4c41;
+    }
+    
+    .login-button {
+      padding: 6px 12px;
+      background: #8d6e63;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    
+    .login-button:hover {
+      background: #6d4c41;
+    }
+    
+    /* Make iframe responsive */
+    @media (max-width: 768px) {
+      .navigation-container {
+        flex-wrap: wrap;
+        padding: 10px;
+        gap: 10px;
+      }
+      
+      .user-info {
+        width: 100%;
+        margin-left: 0;
+        justify-content: space-between;
+      }
+      
+      .nav-button {
+        flex: 1;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Flutter App Container -->
+  <iframe 
+    src="/irvis/visual/" 
+    class="app-container" 
+    frameborder="0"
+    title="IRVIS Flutter Application">
+  </iframe>
+  
+  <!-- Navigation Container -->
+  <div class="navigation-container">
+    <!-- Always visible buttons -->
+    <a href="#" class="nav-button about" onclick="showAbout(); return false;">About</a>
+    
+    <!-- Admin-only buttons (hidden by default) -->
+    <a href="/irvis/issue" class="nav-button report" id="report-btn" style="display: none;">Report Issue</a>
+    <a href="/irvis/add_user" class="nav-button add-user" id="add-user-btn" style="display: none;">Add User</a>
+    
+    <!-- User info and logout -->
+    <div class="user-info">
+      <span id="user-email">Loading...</span>
+      <span id="admin-badge" style="display: none; background: #4caf50; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">ADMIN</span>
+      <a href="/irvis/logout" class="logout-button">Logout</a>
+    </div>
+  </div>
+
+  <!-- About Modal -->
+  <div id="about-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 8px; max-width: 500px; width: 90%;">
+      <h2 style="margin-bottom: 20px; color: #333;">About IRVIS</h2>
+      <p style="line-height: 1.6; color: #666; margin-bottom: 20px;">
+        IRVIS (Interactive Research Visualization and Information System) is a comprehensive platform 
+        for data visualization and research management. This application provides tools for 
+        interactive data exploration, reporting, and administrative functions.
+      </p>
+      <p style="line-height: 1.6; color: #666; margin-bottom: 20px;">
+        <strong>Features:</strong><br>
+        • Interactive data visualization<br>
+        • Issue reporting and tracking<br>
+        • User management (Admin only)<br>
+        • Secure authentication system
+      </p>
+      <div style="text-align: right;">
+        <button onclick="hideAbout();" style="padding: 8px 16px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Function to show about modal
+    function showAbout() {
+      document.getElementById('about-modal').style.display = 'block';
+    }
+    
+    // Function to hide about modal
+    function hideAbout() {
+      document.getElementById('about-modal').style.display = 'none';
+    }
+    
+    // Close modal when clicking outside
+    document.getElementById('about-modal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        hideAbout();
+      }
+    });
+    
+    // Load user information and show appropriate buttons
+    async function loadUserInfo() {
+      try {
+        const response = await fetch('/irvis/api/user');
+        if (response.ok) {
+          const userData = await response.json();
+          
+          // Update user email
+          document.getElementById('user-email').textContent = userData.email || 'Unknown User';
+          
+          // Show admin badge and buttons if user is admin
+          if (userData.is_admin) {
+            document.getElementById('admin-badge').style.display = 'inline';
+            document.getElementById('report-btn').style.display = 'inline-block';
+            document.getElementById('add-user-btn').style.display = 'inline-block';
+          }
+        } else {
+          // User is not authenticated, show login option
+          console.log('User not authenticated, showing login option');
+          document.getElementById('user-email').textContent = 'Not logged in';
+          
+          // Replace logout button with login button in user info area
+          const logoutBtn = document.querySelector('.logout-button');
+          logoutBtn.textContent = 'Login';
+          logoutBtn.href = '/irvis/login';
+          logoutBtn.className = 'login-button';
+        }
+      } catch (error) {
+        console.error('Error fetching user info:', error);
+        document.getElementById('user-email').textContent = 'Not logged in';
+        
+        // Replace logout button with login button on error too
+        const logoutBtn = document.querySelector('.logout-button');
+        logoutBtn.textContent = 'Login';
+        logoutBtn.href = '/irvis/login';
+        logoutBtn.className = 'login-button';
+      }
+    }
+    
+    // Load user info when page loads
+    document.addEventListener('DOMContentLoaded', loadUserInfo);
+  </script>
+</body>
+</html>

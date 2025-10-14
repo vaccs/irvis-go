@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; background: #f7f7f7; }
+    .container { max-width: 400px; margin: 60px auto; background: #fff; padding: 32px; border-radius: 8px; box-shadow: 0 2px 8px #ccc; }
+    h2 { text-align: center; }
+    .error { color: #d32f2f; text-align: center; margin-bottom: 16px; }
+    input[type="text"], input[type="password"] { width: 100%; padding: 10px; margin: 8px 0 16px 0; border: 1px solid #ccc; border-radius: 4px; }
+    button { width: 100%; padding: 10px; background: #1976d2; color: #fff; border: none; border-radius: 4px; font-size: 16px; margin-bottom: 10px; }
+    button:hover { background: #1565c0; }
+    .skip-button { width: 100%; padding: 10px; background: #8d6e63; color: #fff; text-decoration: none; border-radius: 4px; font-size: 16px; display: block; text-align: center; box-sizing: border-box; }
+    .skip-button:hover { background: #6d4c41; }
+    .button-container { display: flex; flex-direction: column; gap: 10px; }
+  </style>
+  <script>
+    window.onload = function() {
+      const params = new URLSearchParams(window.location.search);
+      const error = params.get('error');
+      
+      if (error) {
+        document.getElementById('error-msg').textContent = error;
+        document.getElementById('error-msg').style.display = 'block';
+      }
+    };
+
+    function showRequestForm() {
+      document.getElementById('login-form').style.display = 'none';
+      document.getElementById('request-form').style.display = 'block';
+      document.getElementById('error-msg').style.display = 'none';
+    }
+
+    function showLoginForm() {
+      document.getElementById('login-form').style.display = 'block';
+      document.getElementById('request-form').style.display = 'none';
+    }
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h2>Login</h2>
+    <div id="error-msg" class="error" style="display:none;"></div>
+    
+    <!-- Login Form -->
+    <div id="login-form">
+      <form method="POST" action="/irvis/login">
+        <label for="login">Email or Username:</label>
+        <input type="text" id="login" name="login" placeholder="Enter email or username" required>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required>
+        <div class="button-container">
+          <button type="submit">Login</button>
+          <a href="/irvis" class="skip-button">Home</a>
+        </div>
+      </form>
+      <div style="text-align: center; margin-top: 16px;">
+        <a href="#" onclick="showRequestForm(); return false;" style="color: #8d6e63; text-decoration: none;">Request Account</a>
+      </div>
+    </div>
+
+    <!-- Request Account Form -->
+    <div id="request-form" style="display: none;">
+      <h3>Request Account Access</h3>
+      <p style="margin-bottom: 16px; color: #666;">Click the button below to open your email client and send a request to the administrator.</p>
+      <a href="mailto:steve.carr@wmich.edu?subject=Irvis%20account%20request&body=Please%20create%20an%20account%20for%20me%20for%20Irvis." 
+         style="display: inline-block; width: 100%; padding: 10px; background: #8d6e63; color: #fff; text-decoration: none; border-radius: 4px; font-size: 16px; text-align: center; box-sizing: border-box;">
+        Send Email Request
+      </a>
+      <div style="text-align: center; margin-top: 16px;">
+        <a href="#" onclick="showLoginForm(); return false;" style="color: #8d6e63; text-decoration: none;">Back to Login</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
