@@ -154,7 +154,7 @@ func main() {
 	maxIdle := getenvInt("MAX_IDLE_CONNS", 10)
 	maxLifetime := getenvInt("CONN_MAX_LIFETIME", 3600) // seconds
 
-	log.Printf("DB config: name=%s user=%s password=%s", dbName, dbUser, dbPassword)
+	log.Printf("DB config: name=%s user=%s", dbName, dbUser)
 	log.Printf("Pool config: maxOpen=%d maxIdle=%d maxLifetime=%ds", maxOpen, maxIdle, maxLifetime)
 
 	// Build DSN and connect to MySQL
