@@ -453,6 +453,87 @@ func main() {
 		c.Redirect(http.StatusFound, "/irvis/issue?success=Issue+submitted+successfully")
 	})
 
+	// Change Password routes (requires authentication)
+	irvisGroup.GET("/change_password", func(c *gin.Context) {
+		log.Printf("GET /irvis/change_password accessed from %s", c.ClientIP())
+
+		content, err := os.ReadFile("./irvis/html/change_password.html")
+		if err != nil {
+			log.Printf("Error reading change_password.html: %v", err)
+			c.String(http.StatusInternalServerError, "Error reading change_password.html: %v", err)
+			return
+		}
+
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		c.String(http.StatusOK, string(content))
+	})
+
+	irvisGroup.POST("/change_password", func(c *gin.Context) {
+		log.Printf("POST /irvis/change_password from %s", c.ClientIP())
+		sess := sessions.Default(c)
+		userID := sess.Get("user_id")
+
+		currentPassword := c.PostForm("current_password")
+		newPassword := c.PostForm("new_password")
+		confirmPassword := c.PostForm("confirm_password")
+
+		// Validate input
+		if currentPassword == "" || newPassword == "" || confirmPassword == "" {
+			log.Printf("Missing password fields from user %v", userID)
+			c.Redirect(http.StatusFound, "/irvis/change_password?error=All+fields+are+required")
+			return
+		}
+
+		// Check password length
+		if len(newPassword) < 6 {
+			log.Printf("New password too short from user %v", userID)
+			c.Redirect(http.StatusFound, "/irvis/change_password?error=Password+must+be+at+least+6+characters")
+			return
+		}
+
+		// Check if passwords match
+		if newPassword != confirmPassword {
+			log.Printf("Password mismatch from user %v", userID)
+			c.Redirect(http.StatusFound, "/irvis/change_password?error=Passwords+do+not+match")
+			return
+		}
+
+		// Check if new password is different from current
+		if currentPassword == newPassword {
+			log.Printf("New password same as current from user %v", userID)
+			c.Redirect(http.StatusFound, "/irvis/change_password?error=New+password+must+be+different")
+			return
+		}
+
+		// Verify current password
+		hashedCurrent := sha256sum(currentPassword)
+		var storedHash string
+		err := db.QueryRow("SELECT hashed_password FROM users WHERE id=?", userID).Scan(&storedHash)
+		if err != nil {
+			log.Printf("Error querying user %v: %v", userID, err)
+			c.Redirect(http.StatusFound, "/irvis/change_password?error=Database+error")
+			return
+		}
+
+		if hashedCurrent != storedHash {
+			log.Printf("Incorrect current password for user %v", userID)
+			c.Redirect(http.StatusFound, "/irvis/change_password?error=Current+password+is+incorrect")
+			return
+		}
+
+		// Update password
+		hashedNew := sha256sum(newPassword)
+		_, err = db.Exec("UPDATE users SET hashed_password=? WHERE id=?", hashedNew, userID)
+		if err != nil {
+			log.Printf("Error updating password for user %v: %v", userID, err)
+			c.Redirect(http.StatusFound, "/irvis/change_password?error=Failed+to+update+password")
+			return
+		}
+
+		log.Printf("Password changed successfully for user %v", userID)
+		c.Redirect(http.StatusFound, "/irvis/change_password?success=Password+changed+successfully")
+	})
+
 	// Admin-only routes
 	adminGroup := r.Group("/irvis")
 	adminGroup.Use(adminMiddleware())
