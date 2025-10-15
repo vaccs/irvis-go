@@ -17,7 +17,7 @@ SERVICE_USER="www-data"
 GO_BINARY_NAME="irvis_go"
 FLUTTER_DIR="$HOME/irvis_flutter"
 # Update this path to match your Flutter installation
-FLUTTER_BIN="${FLUTTER_BIN:-/home/stevecarr/development/flutter/bin/flutter}"
+FLUTTER_BIN="${FLUTTER_BIN:-$HOME/development/flutter/bin/flutter}"
 PROJECT_DIR="$(pwd)"
 
 # Colors for output

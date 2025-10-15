@@ -273,14 +273,34 @@ func main() {
 		c.Redirect(http.StatusFound, "/irvis")
 	})
 
-	// Serve static files for /irvis/visual (Flutter web app) - public
-	irvisPublic.Static("/visual", "./visual/")
+	// Serve static files for /irvis/visual (Flutter web app) - public with cache control
+	irvisPublic.GET("/visual/*filepath", func(c *gin.Context) {
+		// Add cache control headers for Flutter web app
+		// Allow short-term caching but enable revalidation
+		c.Header("Cache-Control", "public, max-age=300, must-revalidate")
+		c.Header("X-Content-Type-Options", "nosniff")
+
+		// For HTML files, use no-cache to ensure fresh content
+		filepath := c.Param("filepath")
+		if filepath == "/" || filepath == "/index.html" {
+			c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
+			c.Header("Pragma", "no-cache")
+			c.Header("Expires", "0")
+		}
+
+		c.FileFromFS(c.Request.URL.Path[len("/irvis/visual"):], http.Dir("./visual"))
+	})
 
 	// Main /irvis route with optional authentication - serve home page
 	irvisPublic.GET("", optionalAuthMiddleware(), func(c *gin.Context) {
 		log.Printf("GET /irvis accessed from %s", c.ClientIP())
 		sess := sessions.Default(c)
 		userID := sess.Get("user_id")
+
+		// Add cache control headers to prevent stale page loads
+		c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
+		c.Header("Pragma", "no-cache")
+		c.Header("Expires", "0")
 
 		// Serve the home.html page for both authenticated and unauthenticated users
 		content, err := os.ReadFile("./irvis/html/home.html")

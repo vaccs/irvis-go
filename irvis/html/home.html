@@ -25,6 +25,43 @@
       border: none;
       background: white;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      opacity: 1;
+      transition: opacity 0.3s ease;
+    }
+    
+    .app-container.loading {
+      opacity: 0.5;
+    }
+    
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 90vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.9);
+      z-index: 10;
+    }
+    
+    .loading-overlay.hidden {
+      display: none;
+    }
+    
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #8d6e63;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
     
     .navigation-container {
@@ -137,12 +174,19 @@
   </style>
 </head>
 <body>
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="spinner"></div>
+  </div>
+  
   <!-- Flutter App Container -->
   <iframe 
+    id="flutter-iframe"
     src="/irvis/visual/" 
-    class="app-container" 
+    class="app-container loading" 
     frameborder="0"
-    title="IRVIS Flutter Application">
+    title="IRVIS Flutter Application"
+    allow="clipboard-read; clipboard-write">
   </iframe>
   
   <!-- Navigation Container -->
@@ -185,6 +229,69 @@
   </div>
 
   <script>
+    // Handle iframe loading
+    let iframeLoadAttempts = 0;
+    const maxLoadAttempts = 3;
+    
+    function hideLoadingOverlay() {
+      const overlay = document.getElementById('loading-overlay');
+      const iframe = document.getElementById('flutter-iframe');
+      
+      if (overlay) {
+        overlay.classList.add('hidden');
+      }
+      if (iframe) {
+        iframe.classList.remove('loading');
+      }
+    }
+    
+    function reloadIframe() {
+      const iframe = document.getElementById('flutter-iframe');
+      if (iframe && iframeLoadAttempts < maxLoadAttempts) {
+        iframeLoadAttempts++;
+        console.log('Reloading iframe, attempt:', iframeLoadAttempts);
+        
+        // Force reload by updating src with cache buster
+        const src = iframe.src.split('?')[0];
+        iframe.src = src + '?t=' + new Date().getTime();
+      }
+    }
+    
+    // Handle iframe load event
+    document.getElementById('flutter-iframe').addEventListener('load', function() {
+      console.log('Iframe loaded successfully');
+      
+      // Small delay to ensure Flutter app is initialized
+      setTimeout(function() {
+        hideLoadingOverlay();
+        
+        // Check if iframe has content
+        try {
+          const iframeDoc = this.contentDocument || this.contentWindow.document;
+          if (iframeDoc.body && iframeDoc.body.innerHTML.trim() === '') {
+            console.warn('Iframe loaded but appears empty, attempting reload...');
+            if (iframeLoadAttempts < maxLoadAttempts) {
+              reloadIframe();
+            }
+          }
+        } catch (e) {
+          // Cross-origin, can't check content, just hide loading
+          console.log('Cross-origin iframe, assuming loaded correctly');
+        }
+      }.bind(this), 500);
+    });
+    
+    // Handle iframe error
+    document.getElementById('flutter-iframe').addEventListener('error', function() {
+      console.error('Iframe failed to load');
+      hideLoadingOverlay();
+    });
+    
+    // Fallback: hide loading after maximum wait time
+    setTimeout(function() {
+      hideLoadingOverlay();
+    }, 10000); // 10 seconds max
+    
     // Function to show about modal
     function showAbout() {
       document.getElementById('about-modal').style.display = 'block';
