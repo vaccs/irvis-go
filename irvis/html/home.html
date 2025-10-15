@@ -194,6 +194,9 @@
     <!-- Always visible buttons -->
     <a href="#" class="nav-button about" onclick="showAbout(); return false;">About</a>
     
+    <!-- Authenticated user buttons (hidden by default) -->
+    <a href="/irvis/change_password" class="nav-button" id="change-password-btn" style="display: none; background: #8d6e63;">Change Password</a>
+    
     <!-- Admin-only buttons (hidden by default) -->
     <a href="/irvis/issue" class="nav-button report" id="report-btn" style="display: none;">Report Issue</a>
     <a href="/irvis/add_user" class="nav-button add-user" id="add-user-btn" style="display: none;">Add User</a>
@@ -318,6 +321,9 @@
           
           // Update user email
           document.getElementById('user-email').textContent = userData.email || 'Unknown User';
+          
+          // Show change password button for all authenticated users
+          document.getElementById('change-password-btn').style.display = 'inline-block';
           
           // Show admin badge and buttons if user is admin
           if (userData.is_admin) {
