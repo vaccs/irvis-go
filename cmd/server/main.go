@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"flag"
 	"log"
 	"net/http"
 	"os"
@@ -130,6 +131,19 @@ func adminMiddleware() gin.HandlerFunc {
 }
 
 func main() {
+	modeDefault := strings.ToLower(os.Getenv("APP_MODE"))
+	if modeDefault == "" {
+		modeDefault = "native"
+	}
+
+	mode := flag.String("mode", modeDefault, "runtime mode: native or docker")
+	flag.Parse()
+
+	runtimeMode := strings.ToLower(strings.TrimSpace(*mode))
+	if runtimeMode != "native" && runtimeMode != "docker" {
+		log.Fatalf("Invalid -mode value %q. Allowed values: native, docker", runtimeMode)
+	}
+
 	// Explicitly load .env file
 	if err := godotenv.Load(".env"); err != nil {
 		log.Printf("Warning: .env file not loaded: %v", err)
@@ -140,15 +154,41 @@ func main() {
 		port = "8080"
 	}
 
+	serverProtocol := strings.ToLower(os.Getenv("SERVER_PROTOCOL"))
+	if serverProtocol == "" {
+		if runtimeMode == "docker" {
+			serverProtocol = "http"
+		} else {
+			serverProtocol = "https"
+		}
+	}
+	if serverProtocol != "http" && serverProtocol != "https" {
+		log.Fatalf("SERVER_PROTOCOL must be 'http' or 'https', got %q", serverProtocol)
+	}
+
 	tlsCert := os.Getenv("TLS_CERT_FILE")
 	tlsKey := os.Getenv("TLS_KEY_FILE")
-	if tlsCert == "" || tlsKey == "" {
-		log.Fatal("TLS_CERT_FILE and TLS_KEY_FILE must be set in .env for HTTPS")
+	if serverProtocol == "https" && (tlsCert == "" || tlsKey == "") {
+		log.Fatal("TLS_CERT_FILE and TLS_KEY_FILE must be set when SERVER_PROTOCOL=https")
 	}
 
 	dbName := os.Getenv("DB_NAME")
 	dbUser := os.Getenv("DB_USER")
 	dbPassword := os.Getenv("DB_PASSWORD")
+	dbHost := os.Getenv("DB_HOST")
+	if dbHost == "" {
+		if runtimeMode == "docker" {
+			dbHost = "mysql"
+		} else {
+			dbHost = "localhost"
+		}
+	}
+	dbPort := os.Getenv("DB_PORT")
+	if dbPort == "" {
+		dbPort = "3306"
+	}
+
+	log.Printf("Runtime mode: %s", runtimeMode)
 
 	maxOpen := getenvInt("MAX_OPEN_CONNS", 20)
 	maxIdle := getenvInt("MAX_IDLE_CONNS", 10)
@@ -158,7 +198,7 @@ func main() {
 	log.Printf("Pool config: maxOpen=%d maxIdle=%d maxLifetime=%ds", maxOpen, maxIdle, maxLifetime)
 
 	// Build DSN and connect to MySQL
-	dsn := dbUser + ":" + dbPassword + "@tcp(localhost:3306)/" + dbName + "?parseTime=true"
+	dsn := dbUser + ":" + dbPassword + "@tcp(" + dbHost + ":" + dbPort + ")/" + dbName + "?parseTime=true"
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatalf("Failed to open DB: %v", err)
@@ -183,7 +223,7 @@ func main() {
 	store.Options(sessions.Options{
 		MaxAge:   86400, // 1 day in seconds
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   serverProtocol == "https",
 	})
 	r.Use(sessions.Sessions("irvis_session", store))
 
@@ -607,6 +647,14 @@ func main() {
 		log.Printf("Admin successfully created user: %s (email: %s, admin: %v)", username, email, isAdmin)
 		c.Redirect(http.StatusFound, "/irvis/add_user?success=User+created+successfully")
 	})
+
+	if serverProtocol == "http" {
+		log.Printf("Server listening with HTTP on :%s", port)
+		if err := r.Run(":" + port); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 
 	log.Printf("Server listening with HTTPS on :%s", port)
 	if err := r.RunTLS(":"+port, tlsCert, tlsKey); err != nil {

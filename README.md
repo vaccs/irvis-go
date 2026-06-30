@@ -1,55 +1,73 @@
 # irvis-go
 
-Simple Go Gin backend exposing a POST /login endpoint.
+Go + Gin web application for IRVIS.
 
-## Endpoints
+## Run Locally (Go)
 
-- GET /healthz — health check
-- POST /login — authenticate with JSON body
+1. Copy `.env.example` to `.env` and adjust values.
+2. Start the app:
 
-Request body:
-
-{
-  "email": "admin@example.com",
-  "password": "password123"
-}
-
-Response (200):
-
-{
-  "token": "<random-hex-token>",
-  "user": { "id": "1", "email": "admin@example.com", "name": "Admin User" }
-}
-
-Errors:
-- 400 invalid JSON or missing fields
-- 401 invalid email or password
-
-## Run
-
-- With Go 1.22+ installed:
-
-```
+```bash
 go run ./cmd/server
 ```
 
-Server listens on :8080 by default. Set PORT to override.
+By default, `SERVER_PROTOCOL=https`, so set `TLS_CERT_FILE` and `TLS_KEY_FILE` in `.env` for HTTPS local runs.
 
-## Try it
+## Run with Docker (HTTP on port 8080)
 
-Optional curl examples:
+This repository now includes Docker support to run the Go app and MySQL together without TLS.
 
+1. Use the Docker env file (already configured): `.env.docker`
+2. Build and start:
+
+```bash
+docker compose up --build
 ```
-# Health
-curl -s http://localhost:8080/healthz | jq
 
-# Login OK
-curl -s -X POST http://localhost:8080/login \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"admin@example.com","password":"password123"}' | jq
+3. Access the app at:
 
-# Login fail
-curl -s -X POST http://localhost:8080/login \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"admin@example.com","password":"wrong"}' | jq
+```text
+http://localhost:8080/irvis
 ```
+
+To stop:
+
+```bash
+docker compose down
+```
+
+To stop and remove database data:
+
+```bash
+docker compose down -v
+```
+
+## Run with Script
+
+Use the helper script to build, start, and quickly health-check the stack:
+
+```bash
+./run_docker_app.sh
+```
+
+The script uses `compose.yaml`, starts containers in detached mode, and checks `http://localhost:8080/healthz`.
+
+## Environment Variables
+
+- `PORT`: server port (default `8080`)
+- `SERVER_PROTOCOL`: `http` or `https`
+- `DB_NAME`: MySQL database name
+- `DB_USER`: MySQL user
+- `DB_PASSWORD`: MySQL password
+- `DB_HOST`: MySQL host (use `mysql` in Docker Compose)
+- `DB_PORT`: MySQL port (default `3306`)
+- `MAX_OPEN_CONNS`: DB max open connections
+- `MAX_IDLE_CONNS`: DB max idle connections
+- `CONN_MAX_LIFETIME`: DB connection max lifetime in seconds
+- `TLS_CERT_FILE`: required when `SERVER_PROTOCOL=https`
+- `TLS_KEY_FILE`: required when `SERVER_PROTOCOL=https`
+- `GITHUB_TOKEN`: optional token used by app features
+
+## Health Check
+
+- `GET /healthz`
