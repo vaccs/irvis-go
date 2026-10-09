@@ -1,13 +1,16 @@
 package main
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -59,6 +62,80 @@ func cleanupStaleLogins(db *sql.DB) {
 	if rowsAffected > 0 {
 		log.Printf("Cleaned up %d stale login sessions", rowsAffected)
 	}
+}
+
+var validDBName = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
+
+// Helper to create the database if it does not exist (used on hosted MySQL
+// servers shared by several apps, e.g. Railway)
+func ensureDatabase(dbUser, dbPassword, dbHost, dbPort, dbName string) error {
+	if !validDBName.MatchString(dbName) {
+		return fmt.Errorf("invalid DB_NAME %q", dbName)
+	}
+	dsn := dbUser + ":" + dbPassword + "@tcp(" + dbHost + ":" + dbPort + ")/"
+	server, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return err
+	}
+	defer server.Close()
+	_, err = server.Exec("CREATE DATABASE IF NOT EXISTS `" + dbName + "`")
+	return err
+}
+
+// Helper to create the users table if it does not exist
+func ensureSchema(db *sql.DB) error {
+	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS users (
+		id INT AUTO_INCREMENT PRIMARY KEY,
+		username VARCHAR(64) NOT NULL UNIQUE,
+		email VARCHAR(255) NOT NULL UNIQUE,
+		hashed_password VARCHAR(255) NOT NULL,
+		is_logged_in BOOLEAN NOT NULL DEFAULT FALSE,
+		is_admin BOOLEAN NOT NULL DEFAULT FALSE
+	)`)
+	return err
+}
+
+// Helper to create an initial admin user from ADMIN_* env vars when the users table is empty
+func seedAdmin(db *sql.DB) error {
+	email := os.Getenv("ADMIN_EMAIL")
+	password := os.Getenv("ADMIN_PASSWORD")
+	if email == "" || password == "" {
+		return nil
+	}
+	username := os.Getenv("ADMIN_USERNAME")
+	if username == "" {
+		username = "admin"
+	}
+
+	var count int
+	if err := db.QueryRow("SELECT COUNT(*) FROM users").Scan(&count); err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+
+	_, err := db.Exec("INSERT INTO users (username, email, hashed_password, is_admin) VALUES (?, ?, ?, TRUE)",
+		username, email, sha256sum(password))
+	if err != nil {
+		return err
+	}
+	log.Printf("Created initial admin user %s (%s)", username, email)
+	return nil
+}
+
+// Helper to get the session signing key; falls back to a random key so a
+// missing secret never leaves sessions signed with a publicly known value
+func sessionSecret() []byte {
+	if s := os.Getenv("SESSION_SECRET"); s != "" {
+		return []byte(s)
+	}
+	log.Printf("Warning: SESSION_SECRET not set, using a random key (users are logged out on restart)")
+	key := make([]byte, 32)
+	if _, err := rand.Read(key); err != nil {
+		log.Fatalf("Failed to generate session key: %v", err)
+	}
+	return key
 }
 
 // Authentication middleware for protected /irvis routes
@@ -197,6 +274,12 @@ func main() {
 	log.Printf("DB config: name=%s user=%s", dbName, dbUser)
 	log.Printf("Pool config: maxOpen=%d maxIdle=%d maxLifetime=%ds", maxOpen, maxIdle, maxLifetime)
 
+	if strings.ToLower(os.Getenv("DB_CREATE_DATABASE")) == "true" {
+		if err := ensureDatabase(dbUser, dbPassword, dbHost, dbPort, dbName); err != nil {
+			log.Fatalf("Failed to create database '%s': %v", dbName, err)
+		}
+	}
+
 	// Build DSN and connect to MySQL
 	dsn := dbUser + ":" + dbPassword + "@tcp(" + dbHost + ":" + dbPort + ")/" + dbName + "?parseTime=true"
 	db, err := sql.Open("mysql", dsn)
@@ -213,13 +296,20 @@ func main() {
 	}
 	log.Printf("Connected to MySQL database '%s' as user '%s'", dbName, dbUser)
 
+	if err := ensureSchema(db); err != nil {
+		log.Fatalf("Failed to create schema: %v", err)
+	}
+	if err := seedAdmin(db); err != nil {
+		log.Fatalf("Failed to create initial admin user: %v", err)
+	}
+
 	// Clean up any stale login sessions on server startup
 	cleanupStaleLogins(db)
 
 	r := gin.Default()
 
 	// Session middleware
-	store := cookie.NewStore([]byte("super-secret-key"))
+	store := cookie.NewStore(sessionSecret())
 	store.Options(sessions.Options{
 		MaxAge:   86400, // 1 day in seconds
 		HttpOnly: true,

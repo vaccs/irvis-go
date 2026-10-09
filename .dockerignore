@@ -1,0 +1,12 @@
+.git
+.vscode
+.env
+.env.*
+!.env.example
+server
+server.crt
+server.key
+github.token
+*.sql
+*.md
+*.sh

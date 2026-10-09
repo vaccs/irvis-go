@@ -1,1 +1,5 @@
 .env
+server
+server.crt
+server.key
+github.token

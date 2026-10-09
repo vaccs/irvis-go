@@ -13,44 +13,32 @@ go run ./cmd/server
 
 By default, `SERVER_PROTOCOL=https`, so set `TLS_CERT_FILE` and `TLS_KEY_FILE` in `.env` for HTTPS local runs.
 
-## Run with Docker (HTTP on port 8080)
+## Deploy on Railway
 
-This repository now includes Docker support to run the Go app and MySQL together without TLS.
+The repo includes a `Dockerfile` and `railway.json`. Railway builds the image, terminates HTTPS, and routes traffic to the app over HTTP on `$PORT`. One MySQL service can be shared by irvis, scvis, and eevis; each app creates its own database on first start.
 
-1. Use the Docker env file (already configured): `.env.docker`
-2. Build and start:
-
-```bash
-docker compose up --build
-```
-
-3. Access the app at:
+1. In a Railway project, add a **MySQL** database (once, shared by all apps).
+2. Add a service from this GitHub repo (`vaccs/irvis-go`).
+3. In the service's **Variables**, set:
 
 ```text
-http://localhost:8080/irvis
+DB_HOST=${{MySQL.MYSQLHOST}}
+DB_PORT=${{MySQL.MYSQLPORT}}
+DB_USER=${{MySQL.MYSQLUSER}}
+DB_PASSWORD=${{MySQL.MYSQLPASSWORD}}
+DB_NAME=irvis
+DB_CREATE_DATABASE=true
+SESSION_SECRET=<long random string, e.g. output of: openssl rand -hex 32>
+ADMIN_EMAIL=<your email>
+ADMIN_PASSWORD=<initial admin password>
+GITHUB_TOKEN=<token, if the issue feature is used>
 ```
 
-To stop:
+4. Under **Settings → Networking**, click **Generate Domain**. The app is at `https://<domain>/irvis`.
 
-```bash
-docker compose down
-```
+On startup the app creates the `users` table if missing, and creates the admin user from `ADMIN_*` only when the table is empty. After the first login you can remove `ADMIN_PASSWORD`.
 
-To stop and remove database data:
-
-```bash
-docker compose down -v
-```
-
-## Run with Script
-
-Use the helper script to build, start, and quickly health-check the stack:
-
-```bash
-./run_docker_app.sh
-```
-
-The script uses `compose.yaml`, starts containers in detached mode, and checks `http://localhost:8080/healthz`.
+To load existing users from another server, use `railway connect MySQL` and run your `mysqldump` file against the `irvis` database.
 
 ## Environment Variables
 
@@ -67,6 +55,9 @@ The script uses `compose.yaml`, starts containers in detached mode, and checks `
 - `TLS_CERT_FILE`: required when `SERVER_PROTOCOL=https`
 - `TLS_KEY_FILE`: required when `SERVER_PROTOCOL=https`
 - `GITHUB_TOKEN`: optional token used by app features
+- `SESSION_SECRET`: key for signing session cookies (random per restart if unset)
+- `DB_CREATE_DATABASE`: `true` to create `DB_NAME` on startup if it does not exist
+- `ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`: initial admin user, created only when the users table is empty
 
 ## Health Check
 
